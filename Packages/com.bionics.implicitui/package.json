@@ -1,0 +1,19 @@
+{
+  "name": "com.bionics.implicitui",
+  "version": "0.1.0",
+  "displayName": "ImplicitUI",
+  "description": "Small, practical UI improvements for Unity.",
+  "unity": "2021.3",
+  "author": {
+    "name": "Bionics",
+    "url": "https://github.com/bionics07"
+  },
+  "documentationUrl": "https://github.com/bionics07/Implicit-UI",
+  "changelogUrl": "https://github.com/bionics07/Implicit-UI/blob/main/Packages/com.bionics.implicitui/CHANGELOG.md",
+  "licensesUrl": "https://github.com/bionics07/Implicit-UI/blob/main/LICENSE",
+  "keywords": [
+    "ui",
+    "user interface"
+  ],
+  "dependencies": {}
+}

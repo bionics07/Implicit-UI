@@ -104,3 +104,10 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Other editors
+.vscode/
+.idea/
+
+# Claude Code personal settings (the shared ones in .claude/settings.json are committed)
+.claude/settings.local.json

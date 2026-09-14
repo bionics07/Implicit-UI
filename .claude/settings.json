@@ -1,0 +1,38 @@
+{
+  "enabledMcpjsonServers": ["unity"],
+  "permissions": {
+    "allow": [
+      "mcp__unity__editor_status",
+      "mcp__unity__console",
+      "mcp__unity__console_status",
+      "mcp__unity__recompile",
+      "mcp__unity__recompile_status",
+      "mcp__unity__list_tests",
+      "mcp__unity__run_tests",
+      "mcp__unity__test_status",
+      "mcp__unity__list_open_scenes",
+      "mcp__unity__get_scene_hierarchy",
+      "mcp__unity__find_gameobjects",
+      "mcp__unity__find_assets",
+      "mcp__unity__search",
+      "mcp__unity__get_selection",
+      "mcp__unity__get_component_properties",
+      "mcp__unity__get_serialized_fields",
+      "mcp__unity__get_material_properties",
+      "mcp__unity__get_shader_properties",
+      "mcp__unity__get_import_settings",
+      "mcp__unity__get_authoring_root",
+      "mcp__unity__get_player_settings",
+      "mcp__unity__get_quality_settings",
+      "mcp__unity__get_graphics_settings",
+      "mcp__unity__get_performance_stats",
+      "mcp__unity__list_shaders",
+      "mcp__unity__package_list",
+      "mcp__unity__package_status",
+      "mcp__unity__read_text_file",
+      "mcp__unity__capture_game_view",
+      "mcp__unity__capture_scene_view",
+      "mcp__unity__screenshot"
+    ]
+  }
+}
