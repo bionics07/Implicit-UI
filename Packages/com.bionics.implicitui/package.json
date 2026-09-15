@@ -1,7 +1,7 @@
 {
   "name": "com.bionics.implicitui",
   "version": "0.1.0",
-  "displayName": "ImplicitUI",
+  "displayName": "Implicit UI",
   "description": "Small, practical UI improvements for Unity.",
   "unity": "2021.3",
   "author": {

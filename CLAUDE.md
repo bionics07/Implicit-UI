@@ -1,7 +1,9 @@
 # Working in this repository
 
-ImplicitUI is a Unity UI package by Bionics: small, practical UI improvements for Unity. It is in
-ideation — scope and API are not decided yet. This file is the briefing for an AI assistant working
+ImplicitUI is a Unity UI package by Bionics: small, practical UI improvements for Unity. Scope,
+architecture, rules and implementation order live in **`Docs/ui-package-guia.md`** (Portuguese, the
+author's living plan) — read it before proposing work, and stop to ask wherever it marks something as
+pending or to be verified. This file is the briefing for an AI assistant working
 here; the README is the one for people using the package.
 
 ## What this repository is
@@ -27,11 +29,11 @@ The package is listed in `testables` in `Packages/manifest.json`. `package.json`
 The live Editor is controlled through **Unity Pipeline** (`com.unity.pipeline`, experimental) and the
 Unity CLI (`unity`, on PATH; `%LOCALAPPDATA%\Unity\bin\unity.exe`). Two entry points to the same Editor:
 
-- **MCP:** `.mcp.json` registers `unity mcp --project-path .`. Its tools are the Editor's commands
-  (`mcp__unity__<command>`).
-- **CLI:** `unity command <name> --<arg> <value>`; `unity command` alone lists everything with
-  parameters. Use it when the MCP connection is down. From PowerShell, C# with quotes in `eval` loses
-  its quotes — run those through bash or use `run_script`.
+- **MCP — the default.** `.mcp.json` registers `unity mcp --project-path .`. Its tools are the Editor's
+  commands (`mcp__unity__<command>`).
+- **CLI — fallback only**, when the MCP connection is down or not loaded in the conversation:
+  `unity command <name> --<arg> <value>`; `unity command` alone lists everything with parameters. From
+  PowerShell, C# with quotes in `eval` loses its quotes — run those through bash or use `run_script`.
 
 Check first, always: `unity status` (GUI Editor shows state `ready`) or the `editor_status` tool.
 
@@ -67,6 +69,11 @@ Check first, always: `unity status` (GUI Editor shows state `ready`) or the `edi
   instances cannot open the same project"). Headless runs go on a copy.
 - **PlayMode tests cannot run synchronously over the Pipeline.** Entering Play mode drops the request;
   use `run_tests --mode playmode --async_tests true` and poll `test_status`.
+- **PlayMode runs need a fresh domain first.** Enter Play Mode Options is on with domain reload disabled
+  (URP template default, kept on purpose). Only the first PlayMode run after a domain reload finds the
+  tests; later runs report `completed` with **0 tests** — a false green. Before every PlayMode run:
+  `eval` `UnityEditor.EditorUtility.RequestScriptReload();` (it may time out while the domain reloads —
+  expected) → poll `editor_status` until `ready` → run. Always check that `total` is above 0.
 - **Unity's analyzers run on package code.** `AppDomain.GetAssemblies()` raises UAC0005, for example.
   Treat new warnings as failures.
 
