@@ -192,17 +192,17 @@ Recorte de polígono contra semiplano (Sutherland–Hodgman), triângulo a triâ
 
 1. Ler a mesh via `VertexHelper.GetUIVertexStream`.
 2. Classificar os 3 vértices contra a reta de corte (dentro/fora).
-3. Nas arestas que cruzam, calcular `t` e interpolar **posição, UV0, UV1 e cor**.
+3. Nas arestas que cruzam, calcular `t` e interpolar **todos os canais do `UIVertex`**: posição, normal, tangent, cor e UV0–UV3. *(Fase 1, 15/09/2026, confirmado pelo autor: ampliado de "posição, UV0, UV1 e cor". A mesh nativa do `Image` só preenche posição, cor e UV0 — os outros canais importam quando um mesh modifier **anterior** ao `ImplicitFill` grava neles, como `PositionAsUV1`, efeitos de terceiros e a intensidade por vértice do `ImplicitGrayscale` da Fase 4. Custo: só os vértices criados no corte.)* A referência do corte é o **bounds da mesh gerada**, não o `RectTransform` — bate com o Filled nativo e acompanha `preserveAspect`, padding e bordas encolhidas.
 4. Re-triangular o polígono resultante (0, 3 ou 4 vértices → 0, 1 ou 2 triângulos).
 5. Reescrever o `VertexHelper`.
 
 Horizontal/Vertical = **um** semiplano. Radial = sequência de clips angulares por quadrante.
 
-⚠️ **Cuidado com canais de vértice:** o `RectMask2D` moderno passa dados de máscara por `TEXCOORD2`. Ao interpolar e ao escolher canais livres, não colidir com isso. Ver §5.3.
+⚠️ **Canais da mesh × interpoladores do shader** *(esclarecido em 15/09/2026)*: o `TEXCOORD2` do `RectMask2D` moderno é um **interpolador do shader** (saída do vertex para o fragment), calculado a partir da posição do vértice — **não é um canal da mesh**. Verificado no `TMP_SDF-Mobile.shader` da TMP instalada na 6.6: a mesh entra por `POSITION`, `NORMAL`, `COLOR`, `TEXCOORD0` e `TEXCOORD1`; `mask : TEXCOORD2` existe só no struct de saída. Para o recorte, interpolar os canais da mesh nunca interfere com a máscara. Ver §5.3.
 
 ### 4.5 Requisitos funcionais
 
-- `fillMethod`: Horizontal, Vertical, Radial 90/180/360, com `clockwise`.
+- `fillMethod`: Horizontal, Vertical, Radial 90/180/360, com `clockwise`. *(Fase 1: Horizontal e Vertical. Com método radial o `ImplicitFill` não recorta e o inspector avisa, até a Fase 2.)*
 - `fillOrigin`: paridade com o `Image.Type.Filled` nativo.
 - `fillAmount`: 0–1.
 - Mudar o fill chama **apenas `SetVerticesDirty()`**, nunca `SetLayoutDirty()`. Como os campos são os nativos do `Image` (§4.3), isso vem do próprio setter da Unity; o `ImplicitFill` não pode introduzir nenhum caminho que suje layout. É o que torna a animação barata e é o diferencial sobre a gambiarra do Slider.
@@ -219,7 +219,7 @@ Horizontal/Vertical = **um** semiplano. Radial = sequência de clips angulares p
 - `fillAmount` = 0 e = 1 (1 deve bater vértice a vértice com o Image nativo).
 - Rect menor que a soma das bordas (Unity encolhe as bordas — o recorte acompanha).
 - Dentro de `RectMask2D` e de `Mask`.
-- Sprite em atlas vs sprite solto.
+- Sprite em atlas vs sprite solto. *(Fase 1: nos testes automáticos, "atlas" = sprite sobre um pedaço de uma textura maior, com UVs fora de 0..1 — é o que importa para a interpolação. Sprites nativos `UI/Skin/UISprite.psd` (9-slice) e `UI/Skin/Knob.psd` (círculo). Atlas real só no teste manual.)*
 - Com `preserveAspect` ligado.
 - Cada `fillMethod` radial em cada `fillOrigin`.
 - Verificação de que mudar `fillAmount` **não** dispara layout rebuild — em todas as linhas da matriz, porque os setters usados são os do `Image` nativo (ugui 1.0 na 2021.3/2022.3, ugui 2.0 na Unity 6).
@@ -279,6 +279,7 @@ col.rgb = lerp(col.rgb, finalGray, _GrayAmount);
 ```
 
 ⚠️ **Colisão de canal de vértice — verificar antes de fixar o design.** O `RectMask2D` moderno passa os dados de máscara por `TEXCOORD2`. Se a intensidade do grayscale for por canal de vértice, precisa ocupar um canal livre e coexistir com isso. Esse é exatamente o problema que o UIEffect enfrentou ao tentar usar `TEXCOORD2` para outros fins. **Confirmar empiricamente qual canal está livre** antes de escrever o shader.
+*(Esclarecido em 15/09/2026, ver §4.4: são duas coisas diferentes. O `TEXCOORD2` da máscara é um interpolador do shader, não um canal da mesh. A intensidade pode ir num canal da mesh (UV1–UV3 — conferir quais a TMP lê, ela usa `TEXCOORD1`), e no shader do grayscale ela precisa sair por um slot de interpolador diferente de `TEXCOORD2`. Falta conferir o `UI-Default` da versão certa: o mirror público é antigo e não tem a softness.)*
 
 **Armadilhas já identificadas** (um shader de grayscale de projeto anterior tinha todas — são os erros típicos de shader de UI escrito à mão):
 
@@ -482,6 +483,7 @@ Cena demo com comparação lado a lado: barra de vida com Sliced+Filled vs. a ga
    **Fase 0 (15/09/2026):** os 4 asmdefs definem `IMPLICITUI_TMP` por duas regras — `com.unity.ugui` ≥ 2.0.0 ou `com.unity.textmeshpro` ≥ 3.0.0 — e referenciam `Unity.TextMeshPro` por nome. `TextMeshProSupport.IsCompiledIn` (Runtime) e `EditorTextMeshProSupport.IsCompiledIn` (Editor) expõem o resultado, e testes EditMode/PlayMode comparam com a presença real do tipo `TMPro.TMP_Text`. Verificado na 6.6 (TMP presente, as duas constantes `true`). **CI verde em 15/09/2026 nas 5 execuções** (2021.3 e 2022.3 com `com.unity.textmeshpro` 3.0.9, 6.0 e 6.6 com a TMP embutida no ugui, e 2022.3 sem TMP), 6/6 testes em cada, zero `warning CS`. O log do Unity do job sem TMP confirma que só o `com.unity.ugui@1.0.0` estava registrado. **Item resolvido.**
 2. **`RectMask2D` e softness.** A softness e as propriedades `_UIMaskSoftnessX/Y` foram adicionadas depois do lançamento inicial do `RectMask2D`, e a TMP levou ainda mais tempo para respeitá-las. Se o shader de grayscale copiar o `UI-Default` da versão certa, isso se resolve sozinho — mas **confirmar em qual das versões da matriz o `UI-Default` já tem a softness** antes de assumir.
 3. **Canal de vértice livre.** O `RectMask2D` moderno usa `TEXCOORD2` para dados de máscara. Confirmar qual canal está realmente livre para a intensidade do grayscale, em cada versão da matriz.
+   *(15/09/2026: esse `TEXCOORD2` é interpolador do shader, não canal da mesh — ver §4.4 e §5.3. A pergunta passa a ser qual canal da mesh a TMP e o `UI-Default` leem em cada versão.)*
 4. **`Screen.dpi` retorna 0** em algumas plataformas. Definir e testar o fallback do modo dp do `ImplicitHitbox`.
 
 ### 11.4 Render pipelines
@@ -522,6 +524,7 @@ Quatro das cinco features da v1.0 (Sliced+Filled, Hitbox, TextSizeGroup, Font Ch
 - `com.unity.ugui` declarado como dependência (§0.7).
 - Prefixo `Implicit` nos componentes, sufixo do tipo base quando herda (§3.3).
 - Sliced+Filled só como `ImplicitFill`, usando os campos de fill nativos do `Image`; wrapper descartado e Fase 3 removida (§4.3, §10).
+- README e sample de cada feature ficam para a Fase 8 (§10); durante as fases de feature só o CHANGELOG é atualizado. Resolve o conflito com a Definition of Done do §0, que pedia os dois por feature. Teste manual da fase usa cena de sandbox em `Assets/Sandbox/`.
 - Grayscale aninhado suportado; estáticos zerados para Enter Play Mode sem domain reload (§5.2).
 - Modo dp com padrão 48dp (§6.1). Pendente: fallback de `Screen.dpi == 0`.
 - Nomes sem prefixo `Bionics.`, seguindo o ImplicitSave (§3.1).

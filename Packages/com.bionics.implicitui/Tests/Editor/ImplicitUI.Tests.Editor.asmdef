@@ -4,6 +4,7 @@
     "references": [
         "ImplicitUI.Runtime",
         "ImplicitUI.Editor",
+        "ImplicitUI.Tests.Runtime",
         "UnityEngine.UI",
         "UnityEditor.UI",
         "Unity.TextMeshPro",

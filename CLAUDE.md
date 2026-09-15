@@ -19,6 +19,7 @@ Packages/com.bionics.implicitui/   the package - this is what ships
   Tests/Runtime/                   ImplicitUI.Tests.Runtime (PlayMode)
   Tests/Editor/                    ImplicitUI.Tests.Editor (EditMode)
 Assets/                            sandbox and manual test scenes only; never referenced by tests
+AgentScripts/                      editor builder scripts for maintainers (run_script); versioned, never shipped
 ```
 
 The package is listed in `testables` in `Packages/manifest.json`. `package.json` declares `"unity":
