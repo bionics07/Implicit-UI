@@ -65,6 +65,9 @@ jobs:
           python3 - "${{ matrix.unityVersion }}" "${{ matrix.testFramework }}" "${{ matrix.textMeshPro }}" <<'PY'
           import json, os, sys
           host = ".ci/compat-host"
+          # Git does not keep empty folders, and without Assets/ Unity refuses the folder as a project
+          # ("Couldn't set project path") before running a single test.
+          os.makedirs(os.path.join(host, "Assets"), exist_ok=True)
           os.makedirs(os.path.join(host, "ProjectSettings"), exist_ok=True)
           with open(os.path.join(host, "ProjectSettings", "ProjectVersion.txt"), "w", encoding="utf-8") as f:
               f.write("m_EditorVersion: " + sys.argv[1] + "\n")
@@ -104,11 +107,16 @@ jobs:
           projectPath: .ci/compat-host
           unityVersion: ${{ matrix.unityVersion }}
           testMode: all
+          # Pinned: "latest" makes the action ask the GitHub API for the newest release before every
+          # job, and that anonymous call gets rate-limited on shared runners (403 fails the job).
+          cliVersion: v0.1.64
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Test results (${{ matrix.unityVersion }}, TMP ${{ matrix.textMeshPro }})
 
+      # Only when the runner got far enough to produce results; otherwise this adds a second,
+      # misleading failure ("path" not supplied) on top of the real one.
       - uses: actions/upload-artifact@v7
-        if: always()
+        if: always() && steps.tests.outputs.artifactsPath != ''
         with:
           name: test-results-${{ matrix.unityVersion }}-tmp-${{ matrix.textMeshPro }}
           path: ${{ steps.tests.outputs.artifactsPath }}
