@@ -198,11 +198,16 @@ Recorte de polígono contra semiplano (Sutherland–Hodgman), triângulo a triâ
 
 Horizontal/Vertical = **um** semiplano. Radial = sequência de clips angulares por quadrante.
 
+**Radial como ficou (Fase 2, 15/09/2026)** — escrito do zero a partir do comportamento do `Image` Filled, sem copiar código:
+- A área da mesh é dividida nas mesmas sub-caixas que o nativo usa: Radial90 = a caixa inteira, pivô no canto da origem; Radial180 = duas metades, pivô no meio da borda; Radial360 = quatro quadrantes, pivô no centro. Cada caixa recebe `fill = fillAmount × n − ordem`, limitado a 0..1.
+- Dentro de cada caixa: recorta-se a mesh para a caixa (só as bordas internas cortam algo) e depois **um** semiplano pela reta que sai do pivô. Com `u` e `v` indo de 0 a 1 do pivô ao canto oposto, a varredura parte da borda `u` e mantém ângulo(u, v) ≤ `fill × 90°`; quando `clockwise` difere da paridade do canto, parte da borda `v`. É essa alternância que mantém a varredura contínua de uma caixa para a outra.
+- A reta é definida no espaço normalizado da caixa e convertida para o espaço real escalando a normal por 1/largura e 1/altura — a transformação só estica os eixos, então a reta continua reta. Tudo passa pelo mesmo `MeshClipper` da Fase 1.
+
 ⚠️ **Canais da mesh × interpoladores do shader** *(esclarecido em 15/09/2026)*: o `TEXCOORD2` do `RectMask2D` moderno é um **interpolador do shader** (saída do vertex para o fragment), calculado a partir da posição do vértice — **não é um canal da mesh**. Verificado no `TMP_SDF-Mobile.shader` da TMP instalada na 6.6: a mesh entra por `POSITION`, `NORMAL`, `COLOR`, `TEXCOORD0` e `TEXCOORD1`; `mask : TEXCOORD2` existe só no struct de saída. Para o recorte, interpolar os canais da mesh nunca interfere com a máscara. Ver §5.3.
 
 ### 4.5 Requisitos funcionais
 
-- `fillMethod`: Horizontal, Vertical, Radial 90/180/360, com `clockwise`. *(Fase 1: Horizontal e Vertical. Com método radial o `ImplicitFill` não recorta e o inspector avisa, até a Fase 2.)*
+- `fillMethod`: Horizontal, Vertical, Radial 90/180/360, com `clockwise`. *(Fase 1: Horizontal e Vertical. Fase 2, 15/09/2026: os três radiais com `clockwise`, em paridade com o Filled nativo — ver §4.4 e §12.)*
 - `fillOrigin`: paridade com o `Image.Type.Filled` nativo.
 - `fillAmount`: 0–1.
 - Mudar o fill chama **apenas `SetVerticesDirty()`**, nunca `SetLayoutDirty()`. Como os campos são os nativos do `Image` (§4.3), isso vem do próprio setter da Unity; o `ImplicitFill` não pode introduzir nenhum caminho que suje layout. É o que torna a animação barata e é o diferencial sobre a gambiarra do Slider.
@@ -221,8 +226,8 @@ Horizontal/Vertical = **um** semiplano. Radial = sequência de clips angulares p
 - Dentro de `RectMask2D` e de `Mask`.
 - Sprite em atlas vs sprite solto. *(Fase 1: nos testes automáticos, "atlas" = sprite sobre um pedaço de uma textura maior, com UVs fora de 0..1 — é o que importa para a interpolação. Sprites nativos `UI/Skin/UISprite.psd` (9-slice) e `UI/Skin/Knob.psd` (círculo). Atlas real só no teste manual.)*
 - Com `preserveAspect` ligado.
-- Cada `fillMethod` radial em cada `fillOrigin`.
-- Verificação de que mudar `fillAmount` **não** dispara layout rebuild — em todas as linhas da matriz, porque os setters usados são os do `Image` nativo (ugui 1.0 na 2021.3/2022.3, ugui 2.0 na Unity 6).
+- Cada `fillMethod` radial em cada `fillOrigin`. *(Fase 2, 15/09/2026: paridade contra um `Image` Filled nativo do mesmo tamanho e sprite, em cada método × 4 origens × 2 sentidos × 5 valores de fill. Compara a fração de área sobre a própria mesh cheia e uma grade de 41×29 pontos, mais UV quando os dois são Simple. A comparação é no espaço normalizado de cada mesh, porque o Filled desenha nas dimensões de desenho do sprite e o Sliced/Tiled cobre o rect inteiro — em coordenadas absolutas a área cheia já difere uns 0,4%. Pontos a menos de 1e-4 (normalizado) de uma borda são ignorados: ali dentro/fora depende de arredondamento, empates medidos entre 3e-6 e 2e-5. Um teste-guarda prova que a comparação acusa diferença com outro fill, e a mutação que inverte o sentido da varredura derrubou exatamente os 11 testes radiais.)*
+- Verificação de que mudar `fillAmount` **não** dispara layout rebuild — em todas as linhas da matriz, porque os setters usados são os do `Image` nativo (ugui 1.0 na 2021.3/2022.3, ugui 2.0 na Unity 6). *(Verificado pelo CI da Fase 1 em 15/09/2026: verde nas 5 execuções, incluindo 2021.3 e 2022.3.)*
 - `Image.type = Filled` com `ImplicitFill` presente: nenhum recorte duplicado.
 - Mudar `fillMethod` zera `fillOrigin` (comportamento do setter nativo) — o `ImplicitFill` acompanha sem estado próprio desatualizado.
 
@@ -524,6 +529,7 @@ Quatro das cinco features da v1.0 (Sliced+Filled, Hitbox, TextSizeGroup, Font Ch
 - `com.unity.ugui` declarado como dependência (§0.7).
 - Prefixo `Implicit` nos componentes, sufixo do tipo base quando herda (§3.3).
 - Sliced+Filled só como `ImplicitFill`, usando os campos de fill nativos do `Image`; wrapper descartado e Fase 3 removida (§4.3, §10).
+- Radial (Fase 2): **paridade com o Filled nativo**. O ângulo é medido como o nativo mede — no espaço normalizado de cada sub-caixa (90: a caixa inteira; 180: duas metades; 360: quatro quadrantes) —, e não como ângulo real na tela. Em ícone quadrado com Radial90/Radial360 os dois dão o mesmo resultado; em rect não quadrado e no Radial180 o resultado e o ritmo da animação ficam iguais aos do Filled. *(Decidido em 15/09/2026.)*
 - README e sample de cada feature ficam para a Fase 8 (§10); durante as fases de feature só o CHANGELOG é atualizado. Resolve o conflito com a Definition of Done do §0, que pedia os dois por feature. Teste manual da fase usa cena de sandbox em `Assets/Sandbox/`.
 - Grayscale aninhado suportado; estáticos zerados para Enter Play Mode sem domain reload (§5.2).
 - Modo dp com padrão 48dp (§6.1). Pendente: fallback de `Screen.dpi == 0`.

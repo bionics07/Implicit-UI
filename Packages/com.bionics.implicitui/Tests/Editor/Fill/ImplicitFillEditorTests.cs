@@ -28,6 +28,7 @@ namespace ImplicitUI.Tests.EditorTests
         [TestCase(ImplicitFillEditor.FillMethodProperty)]
         [TestCase(ImplicitFillEditor.FillOriginProperty)]
         [TestCase(ImplicitFillEditor.FillAmountProperty)]
+        [TestCase(ImplicitFillEditor.FillClockwiseProperty)]
         public void ImageHasTheSerializedFieldTheInspectorEdits(string propertyName)
         {
             var image = new SerializedObject(m_GameObject.GetComponent<Image>());

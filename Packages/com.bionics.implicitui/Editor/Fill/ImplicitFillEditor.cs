@@ -14,21 +14,29 @@ namespace ImplicitUI.Editor
         internal const string FillMethodProperty = "m_FillMethod";
         internal const string FillOriginProperty = "m_FillOrigin";
         internal const string FillAmountProperty = "m_FillAmount";
+        internal const string FillClockwiseProperty = "m_FillClockwise";
 
         private static readonly GUIContent s_FillMethodLabel = new GUIContent("Fill Method",
-            "Direction the fill grows in. Horizontal and Vertical are supported.");
+            "How the fill grows: along an axis, or sweeping around a corner, an edge or the center.");
         private static readonly GUIContent s_FillOriginLabel = new GUIContent("Fill Origin",
-            "Side the fill starts from.");
+            "Where the fill starts from.");
         private static readonly GUIContent s_FillAmountLabel = new GUIContent("Fill Amount",
             "How much of the Image is shown, from 0 to 1. The same value as Image.fillAmount.");
-        private static readonly GUIContent[] s_HorizontalOrigins = { new GUIContent("Left"), new GUIContent("Right") };
-        private static readonly GUIContent[] s_VerticalOrigins = { new GUIContent("Bottom"), new GUIContent("Top") };
+        private static readonly GUIContent s_ClockwiseLabel = new GUIContent("Clockwise",
+            "Direction a radial fill sweeps in.");
+
+        private static readonly GUIContent[] s_HorizontalOrigins = Labels("Left", "Right");
+        private static readonly GUIContent[] s_VerticalOrigins = Labels("Bottom", "Top");
+        private static readonly GUIContent[] s_Radial90Origins = Labels("Bottom Left", "Top Left", "Top Right", "Bottom Right");
+        private static readonly GUIContent[] s_Radial180Origins = Labels("Bottom", "Left", "Top", "Right");
+        private static readonly GUIContent[] s_Radial360Origins = Labels("Bottom", "Right", "Top", "Left");
 
         private Image[] m_Images;
         private SerializedObject m_ImageObject;
         private SerializedProperty m_FillMethod;
         private SerializedProperty m_FillOrigin;
         private SerializedProperty m_FillAmount;
+        private SerializedProperty m_FillClockwise;
 
         private void OnEnable()
         {
@@ -44,11 +52,13 @@ namespace ImplicitUI.Editor
             m_FillMethod = m_ImageObject.FindProperty(FillMethodProperty);
             m_FillOrigin = m_ImageObject.FindProperty(FillOriginProperty);
             m_FillAmount = m_ImageObject.FindProperty(FillAmountProperty);
+            m_FillClockwise = m_ImageObject.FindProperty(FillClockwiseProperty);
         }
 
         public override void OnInspectorGUI()
         {
-            if (m_ImageObject == null || m_FillMethod == null || m_FillOrigin == null || m_FillAmount == null)
+            if (m_ImageObject == null || m_FillMethod == null || m_FillOrigin == null || m_FillAmount == null
+                || m_FillClockwise == null)
             {
                 EditorGUILayout.HelpBox("Implicit Fill needs an Image on the same GameObject.", MessageType.Error);
                 return;
@@ -75,12 +85,10 @@ namespace ImplicitUI.Editor
             if (!m_FillMethod.hasMultipleDifferentValues)
             {
                 var method = (Image.FillMethod)m_FillMethod.intValue;
-                if (method == Image.FillMethod.Horizontal)
-                    DrawOrigin(s_HorizontalOrigins);
-                else if (method == Image.FillMethod.Vertical)
-                    DrawOrigin(s_VerticalOrigins);
-                else
-                    EditorGUILayout.HelpBox("Radial fill is not supported yet, so the Image is drawn without fill.", MessageType.Info);
+                DrawOrigin(OriginsFor(method));
+
+                if (method != Image.FillMethod.Horizontal && method != Image.FillMethod.Vertical)
+                    EditorGUILayout.PropertyField(m_FillClockwise, s_ClockwiseLabel);
             }
 
             EditorGUILayout.Slider(m_FillAmount, 0f, 1f, s_FillAmountLabel);
@@ -96,6 +104,31 @@ namespace ImplicitUI.Editor
             if (EditorGUI.EndChangeCheck())
                 m_FillOrigin.intValue = origin;
             EditorGUI.showMixedValue = false;
+        }
+
+        private static GUIContent[] OriginsFor(Image.FillMethod method)
+        {
+            switch (method)
+            {
+                case Image.FillMethod.Horizontal:
+                    return s_HorizontalOrigins;
+                case Image.FillMethod.Vertical:
+                    return s_VerticalOrigins;
+                case Image.FillMethod.Radial90:
+                    return s_Radial90Origins;
+                case Image.FillMethod.Radial180:
+                    return s_Radial180Origins;
+                default:
+                    return s_Radial360Origins;
+            }
+        }
+
+        private static GUIContent[] Labels(params string[] names)
+        {
+            var labels = new GUIContent[names.Length];
+            for (var i = 0; i < names.Length; i++)
+                labels[i] = new GUIContent(names[i]);
+            return labels;
         }
     }
 }

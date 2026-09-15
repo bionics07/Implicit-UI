@@ -12,6 +12,10 @@ namespace ImplicitUI.Tests.EditorTests
     public class ImplicitFillTests
     {
         private const float Tolerance = 1e-3f;
+
+        // Normalized distance from a triangle edge under which a sample point counts as lying on the cut.
+        private const float BoundaryTolerance = 1e-4f;
+
         private const string SquareSpritePath = "UI/Skin/UISprite.psd";
         private const string CircleSpritePath = "UI/Skin/Knob.psd";
 
@@ -177,13 +181,66 @@ namespace ImplicitUI.Tests.EditorTests
             AssertSameMesh(native, Rebuild());
         }
 
-        [Test]
-        public void RadialFillMethodLeavesTheMeshUntouched()
+        [TestCase(Image.FillMethod.Radial90)]
+        [TestCase(Image.FillMethod.Radial180)]
+        [TestCase(Image.FillMethod.Radial360)]
+        public void RadialMatchesANativeFilledImageOnASquare(Image.FillMethod method)
         {
-            m_Image.fillMethod = Image.FillMethod.Radial360;
-            m_Image.fillAmount = 0.5f;
+            AssertRadialParity(method, new Vector2(100f, 100f), Image.Type.Simple, true);
+        }
 
-            AssertSameMesh(NativeMesh(), Rebuild());
+        [TestCase(Image.FillMethod.Radial90)]
+        [TestCase(Image.FillMethod.Radial180)]
+        [TestCase(Image.FillMethod.Radial360)]
+        public void RadialMatchesANativeFilledImageOnAWideRect(Image.FillMethod method)
+        {
+            AssertRadialParity(method, new Vector2(200f, 60f), Image.Type.Simple, true);
+        }
+
+        // A sliced or tiled mesh has different UVs than a Filled one, so only the region it covers is compared.
+        [TestCase(Image.FillMethod.Radial90)]
+        [TestCase(Image.FillMethod.Radial180)]
+        [TestCase(Image.FillMethod.Radial360)]
+        public void RadialOnASlicedImageCoversTheRegionANativeFilledImageCovers(Image.FillMethod method)
+        {
+            AssertRadialParity(method, new Vector2(200f, 60f), Image.Type.Sliced, false);
+        }
+
+        [Test]
+        public void RadialOnATiledImageCoversTheRegionANativeFilledImageCovers()
+        {
+            AssertRadialParity(Image.FillMethod.Radial360, new Vector2(200f, 60f), Image.Type.Tiled, false);
+        }
+
+        [Test]
+        public void RadialWithPreserveAspectMatchesANativeFilledImage()
+        {
+            var circle = AssetDatabase.GetBuiltinExtraResource<Sprite>(CircleSpritePath);
+            AssertRadialParity(Image.FillMethod.Radial360, new Vector2(200f, 60f), Image.Type.Simple, true, image =>
+            {
+                image.sprite = circle;
+                image.preserveAspect = true;
+            });
+        }
+
+        [Test]
+        public void RadialParityCheckCatchesADifferentFill()
+        {
+            // Guards the parity helper itself: a native image at another amount must not count as a match.
+            m_Image.type = Image.Type.Simple;
+            var native = UiTestUtility.CreateImage(m_Canvas.transform, new Vector2(200f, 40f));
+            native.sprite = m_Image.sprite;
+            native.type = Image.Type.Filled;
+            var nativeCapture = native.gameObject.AddComponent<MeshCapture>();
+            foreach (var image in new[] { m_Image, native })
+                image.fillMethod = Image.FillMethod.Radial360;
+            m_Image.fillAmount = 0.4f;
+            native.fillAmount = 0.45f;
+
+            Canvas.ForceUpdateCanvases();
+
+            Assert.That(CountCoverageMismatches(m_Capture.Triangles, nativeCapture.Triangles, new Vector2(200f, 40f), false),
+                Is.GreaterThan(0));
         }
 
         [Test]
@@ -303,6 +360,177 @@ namespace ImplicitUI.Tests.EditorTests
             var expectedUv = UvAt(native, axis, cut);
             foreach (var vertex in mesh.Where(v => Mathf.Abs(v.position[axis] - cut) <= Tolerance))
                 Assert.That(vertex.uv0[axis], Is.EqualTo(expectedUv).Within(Tolerance), "UV on the cut");
+        }
+
+        private static readonly float[] s_RadialAmounts = { 0.1f, 0.3f, 0.5f, 0.62f, 0.9f };
+
+        // Runs every origin, direction and several amounts against a native Filled image of the same size and
+        // sprite, and reports every combination that differs in covered area or in which sample points it covers.
+        private void AssertRadialParity(Image.FillMethod method, Vector2 size, Image.Type type, bool checkUvs,
+            System.Action<Image> configure = null)
+        {
+            ((RectTransform)m_Image.transform).sizeDelta = size;
+            m_Image.type = type;
+
+            var native = UiTestUtility.CreateImage(m_Canvas.transform, size);
+            native.sprite = m_Image.sprite;
+            native.type = Image.Type.Filled;
+            configure?.Invoke(m_Image);
+            configure?.Invoke(native);
+            var nativeCapture = native.gameObject.AddComponent<MeshCapture>();
+
+            // Each mesh is compared in its own normalized space. A Filled image draws inside the sprite's drawing
+            // dimensions while a sliced or tiled mesh covers the rect, so their full extents already differ a little
+            // before any fill - and the promise is the same fill relative to what each Image draws.
+            foreach (var image in new[] { m_Image, native })
+                image.fillAmount = 1f;
+            Canvas.ForceUpdateCanvases();
+            var ourFullArea = UiTestUtility.Area(m_Capture.Triangles);
+            var nativeFullArea = UiTestUtility.Area(nativeCapture.Triangles);
+            GetBounds(m_Capture.Triangles, out var ourMin, out var ourMax);
+            GetBounds(nativeCapture.Triangles, out var nativeMin, out var nativeMax);
+            Assert.That(ourFullArea, Is.GreaterThan(0f));
+            Assert.That(nativeFullArea, Is.GreaterThan(0f));
+
+            var failures = new List<string>();
+            foreach (var clockwise in new[] { true, false })
+            {
+                for (var origin = 0; origin < 4; origin++)
+                {
+                    foreach (var amount in s_RadialAmounts)
+                    {
+                        foreach (var image in new[] { m_Image, native })
+                        {
+                            image.fillMethod = method;
+                            image.fillOrigin = origin;
+                            image.fillClockwise = clockwise;
+                            image.fillAmount = amount;
+                        }
+
+                        Canvas.ForceUpdateCanvases();
+
+                        var label = method + " origin " + origin + (clockwise ? " clockwise" : " counterclockwise") + " amount " + amount;
+                        var ourFraction = UiTestUtility.Area(m_Capture.Triangles) / ourFullArea;
+                        var nativeFraction = UiTestUtility.Area(nativeCapture.Triangles) / nativeFullArea;
+                        if (Mathf.Abs(ourFraction - nativeFraction) > Tolerance)
+                            failures.Add(label + ": filled fraction " + ourFraction + ", native " + nativeFraction);
+
+                        var details = new System.Text.StringBuilder();
+                        var mismatches = CountCoverageMismatches(m_Capture.Triangles, ourMin, ourMax,
+                            nativeCapture.Triangles, nativeMin, nativeMax, checkUvs, details);
+                        if (mismatches > 0)
+                            failures.Add(label + ": " + mismatches + " sample points differ" + details);
+                    }
+                }
+            }
+
+            Assert.That(nativeCapture.Rebuilds, Is.GreaterThan(0), "the native image was rebuilt");
+            Assert.That(failures, Is.Empty, string.Join("\n", failures));
+        }
+
+        // Both meshes sampled at the same points of a shared rect.
+        private static int CountCoverageMismatches(List<UIVertex> ours, List<UIVertex> native, Vector2 size, bool checkUvs)
+        {
+            return CountCoverageMismatches(ours, -size * 0.5f, size * 0.5f, native, -size * 0.5f, size * 0.5f, checkUvs);
+        }
+
+        // Sample points on an irregular grid, so none sits exactly on a center line or a diagonal. Each point is
+        // the same normalized position inside each mesh's own bounds.
+        private static int CountCoverageMismatches(List<UIVertex> ours, Vector2 ourMin, Vector2 ourMax,
+            List<UIVertex> native, Vector2 nativeMin, Vector2 nativeMax, bool checkUvs,
+            System.Text.StringBuilder details = null)
+        {
+            const int columns = 41;
+            const int rows = 29;
+            var mismatches = 0;
+            for (var column = 0; column < columns; column++)
+            {
+                for (var row = 0; row < rows; row++)
+                {
+                    var normalized = new Vector2((column + 0.37f) / columns, (row + 0.61f) / rows);
+                    var ourPoint = ourMin + Vector2.Scale(normalized, ourMax - ourMin);
+                    var nativePoint = nativeMin + Vector2.Scale(normalized, nativeMax - nativeMin);
+                    var inOurs = TryGetUv(ours, ourPoint, out var ourUv);
+                    var inNative = TryGetUv(native, nativePoint, out var nativeUv);
+                    if (inOurs == inNative && !(checkUvs && inOurs && (ourUv - nativeUv).sqrMagnitude > 1e-6f))
+                        continue;
+
+                    // A point this close to an edge sits on the cut itself, where inside or outside depends on float
+                    // rounding (the native cut and ours reach the same line through different arithmetic). Measured
+                    // ties were 3e-6 to 2e-5; a wrong cut moves whole regions and fails the area check anyway. Only
+                    // measured for points that disagree, which keeps meshes with many triangles fast.
+                    var ourEdge = NearestEdgeDistance(ours, ourPoint, ourMin, ourMax);
+                    var nativeEdge = NearestEdgeDistance(native, nativePoint, nativeMin, nativeMax);
+                    if (ourEdge < BoundaryTolerance || nativeEdge < BoundaryTolerance)
+                        continue;
+
+                    mismatches++;
+                    details?.Append(" [point " + normalized.x.ToString("F4") + ", " + normalized.y.ToString("F4")
+                        + " ours " + inOurs + " native " + inNative
+                        + " edge distance ours " + ourEdge.ToString("G3") + " native " + nativeEdge.ToString("G3") + "]");
+                }
+            }
+
+            return mismatches;
+        }
+
+        // Shortest distance from a point to any triangle edge, in the mesh's normalized space (bounds = 0..1).
+        private static float NearestEdgeDistance(List<UIVertex> triangles, Vector2 point, Vector2 min, Vector2 max)
+        {
+            var size = max - min;
+            var p = new Vector2((point.x - min.x) / size.x, (point.y - min.y) / size.y);
+            var nearest = float.MaxValue;
+            for (var i = 0; i + 2 < triangles.Count; i += 3)
+            {
+                for (var k = 0; k < 3; k++)
+                {
+                    Vector2 a = triangles[i + k].position;
+                    Vector2 b = triangles[i + (k + 1) % 3].position;
+                    a = new Vector2((a.x - min.x) / size.x, (a.y - min.y) / size.y);
+                    b = new Vector2((b.x - min.x) / size.x, (b.y - min.y) / size.y);
+                    var ab = b - a;
+                    var t = ab.sqrMagnitude > 0f ? Mathf.Clamp01(Vector2.Dot(p - a, ab) / ab.sqrMagnitude) : 0f;
+                    nearest = Mathf.Min(nearest, Vector2.Distance(p, a + ab * t));
+                }
+            }
+
+            return nearest;
+        }
+
+        private static void GetBounds(List<UIVertex> mesh, out Vector2 min, out Vector2 max)
+        {
+            min = new Vector2(float.MaxValue, float.MaxValue);
+            max = new Vector2(float.MinValue, float.MinValue);
+            foreach (var vertex in mesh)
+            {
+                min = Vector2.Min(min, vertex.position);
+                max = Vector2.Max(max, vertex.position);
+            }
+        }
+
+        private static bool TryGetUv(List<UIVertex> triangles, Vector2 point, out Vector2 uv)
+        {
+            for (var i = 0; i + 2 < triangles.Count; i += 3)
+            {
+                Vector2 a = triangles[i].position;
+                Vector2 b = triangles[i + 1].position;
+                Vector2 c = triangles[i + 2].position;
+                var denominator = (b.y - c.y) * (a.x - c.x) + (c.x - b.x) * (a.y - c.y);
+                if (Mathf.Abs(denominator) < 1e-6f)
+                    continue;
+
+                var wa = ((b.y - c.y) * (point.x - c.x) + (c.x - b.x) * (point.y - c.y)) / denominator;
+                var wb = ((c.y - a.y) * (point.x - c.x) + (a.x - c.x) * (point.y - c.y)) / denominator;
+                var wc = 1f - wa - wb;
+                if (wa < -1e-4f || wb < -1e-4f || wc < -1e-4f)
+                    continue;
+
+                uv = wa * (Vector2)triangles[i].uv0 + wb * (Vector2)triangles[i + 1].uv0 + wc * (Vector2)triangles[i + 2].uv0;
+                return true;
+            }
+
+            uv = default;
+            return false;
         }
 
         // The UV a native mesh has at a coordinate, interpolated between its nearest vertex columns.

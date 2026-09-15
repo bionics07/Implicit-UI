@@ -65,7 +65,12 @@ Check first, always: `unity status` (GUI Editor shows state `ready`) or the `edi
   fails to connect. Confirm with `unity pipeline list`, read `error CS####` from `Logs/Editor.log`, fix
   the source, and ask the author to restart Unity.
 - **A command that hangs may be a modal dialog.** `editor_status` still answers and reports
-  `blocked_by_dialog`; it cannot be dismissed remotely.
+  `blocked_by_dialog`; it cannot be dismissed remotely. In practice it may not answer at all: then
+  check the editor's CPU (idle means blocked, not looping) and list the visible window titles of the
+  Unity process.
+- **EditMode test runs with a modified open scene block on "Scene(s) Have Been Modified".** The Test
+  Runner asks to save before it starts, every Pipeline command times out, and `unity status` still says
+  `ready`. Before running tests, make sure no open scene is dirty - ask the author to save or discard.
 - **Headless batchmode cannot open this project while the Editor has it open** ("Multiple Unity
   instances cannot open the same project"). Headless runs go on a copy.
 - **PlayMode tests cannot run synchronously over the Pipeline.** Entering Play mode drops the request;
