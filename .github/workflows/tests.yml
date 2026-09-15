@@ -1,0 +1,114 @@
+name: Tests
+
+# Runs the package test suite on every Unity line the package supports.
+#
+# The tests run in .ci/compat-host, a bare project that references the package by path - never in the
+# development project at the repository root, which is on Unity 6 and carries a sandbox a user would
+# not have.
+
+on:
+  push:
+    branches: [main, 'step-*']
+    paths:
+      - 'Packages/com.bionics.implicitui/**'
+      - '.ci/**'
+      - '.github/workflows/tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Unity ${{ matrix.unityVersion }}${{ matrix.textMeshPro == 'none' && ' (no TMP)' || '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Last builds available on a Personal license. Newer 2021.3 and 2022.3 builds are
+          # Extended LTS and refuse to start without Industry or Enterprise.
+          # Before Unity 6, TextMeshPro is its own package, so the host has to install it.
+          - unityVersion: 2021.3.45f2
+            testFramework: '1.1.33'
+            textMeshPro: '3.0.9'
+          - unityVersion: 2022.3.62f3
+            testFramework: '1.1.33'
+            textMeshPro: '3.0.9'
+          # From Unity 6 on, TextMeshPro ships inside com.unity.ugui and cannot be left out.
+          - unityVersion: 6000.0.67f1
+            testFramework: '1.6.0'
+            textMeshPro: 'bundled'
+          - unityVersion: 6000.6.0f1
+            testFramework: '1.8.0'
+            textMeshPro: 'bundled'
+          # The only line where TextMeshPro can be absent. Proves every TMP use sits behind
+          # IMPLICITUI_TMP, and that the define is really off when TMP is missing.
+          - unityVersion: 2022.3.62f3
+            testFramework: '1.1.33'
+            textMeshPro: 'none'
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # The host is shared by every Unity line, so the per-line bits are written here: the editor
+      # version (Unity refuses a folder without ProjectVersion.txt), the test framework version, and
+      # the TextMeshPro package where the line needs one.
+      - name: Pin the host project to this Unity line
+        run: |
+          python3 - "${{ matrix.unityVersion }}" "${{ matrix.testFramework }}" "${{ matrix.textMeshPro }}" <<'PY'
+          import json, os, sys
+          host = ".ci/compat-host"
+          os.makedirs(os.path.join(host, "ProjectSettings"), exist_ok=True)
+          with open(os.path.join(host, "ProjectSettings", "ProjectVersion.txt"), "w", encoding="utf-8") as f:
+              f.write("m_EditorVersion: " + sys.argv[1] + "\n")
+          path = os.path.join(host, "Packages", "manifest.json")
+          with open(path, encoding="utf-8") as f:
+              manifest = json.load(f)
+          manifest["dependencies"]["com.unity.test-framework"] = sys.argv[2]
+          if sys.argv[3] not in ("none", "bundled"):
+              manifest["dependencies"]["com.unity.textmeshpro"] = sys.argv[3]
+          with open(path, "w", encoding="utf-8") as f:
+              json.dump(manifest, f, indent=2)
+          PY
+
+      # Samples live in Samples~, a folder Unity never compiles on its own, so nothing else would
+      # notice a sample that stopped compiling. Copying them into the host is what checks them.
+      - name: Import the package samples into the host
+        run: |
+          if [ -d "Packages/com.bionics.implicitui/Samples~" ]; then
+            mkdir -p .ci/compat-host/Assets/Samples
+            cp -R "Packages/com.bionics.implicitui/Samples~/." .ci/compat-host/Assets/Samples/
+          fi
+
+      - uses: actions/cache@v6
+        with:
+          path: .ci/compat-host/Library
+          key: Library-${{ matrix.unityVersion }}-${{ matrix.textMeshPro }}-${{ hashFiles('.ci/compat-host/Packages/manifest.json', 'Packages/com.bionics.implicitui/package.json') }}
+          restore-keys: |
+            Library-${{ matrix.unityVersion }}-${{ matrix.textMeshPro }}-
+
+      - uses: game-ci/unity-test-runner@v4
+        id: tests
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .ci/compat-host
+          unityVersion: ${{ matrix.unityVersion }}
+          testMode: all
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Test results (${{ matrix.unityVersion }}, TMP ${{ matrix.textMeshPro }})
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test-results-${{ matrix.unityVersion }}-tmp-${{ matrix.textMeshPro }}
+          path: ${{ steps.tests.outputs.artifactsPath }}

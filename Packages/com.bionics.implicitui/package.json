@@ -15,5 +15,7 @@
     "ui",
     "user interface"
   ],
-  "dependencies": {}
+  "dependencies": {
+    "com.unity.ugui": "1.0.0"
+  }
 }

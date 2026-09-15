@@ -10,7 +10,7 @@ here; the README is the one for people using the package.
 
 The whole Unity development project (**6000.6.0f1**, URP), not only the package. The distributable is
 the embedded package under `Packages/com.bionics.implicitui/`. Repository:
-https://github.com/bionics07/Implicit-UI (private for now).
+https://github.com/bionics07/Implicit-UI (public).
 
 ```
 Packages/com.bionics.implicitui/   the package - this is what ships

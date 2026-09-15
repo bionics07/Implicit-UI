@@ -3,6 +3,8 @@
     "rootNamespace": "ImplicitUI.Tests",
     "references": [
         "ImplicitUI.Runtime",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
@@ -17,6 +19,17 @@
     "defineConstraints": [
         "UNITY_INCLUDE_TESTS"
     ],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.ugui",
+            "expression": "2.0.0",
+            "define": "IMPLICITUI_TMP"
+        },
+        {
+            "name": "com.unity.textmeshpro",
+            "expression": "3.0.0",
+            "define": "IMPLICITUI_TMP"
+        }
+    ],
     "noEngineReferences": false
 }

@@ -2,7 +2,10 @@
     "name": "ImplicitUI.Editor",
     "rootNamespace": "ImplicitUI.Editor",
     "references": [
-        "ImplicitUI.Runtime"
+        "ImplicitUI.Runtime",
+        "UnityEngine.UI",
+        "UnityEditor.UI",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [
         "Editor"
@@ -13,6 +16,17 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.ugui",
+            "expression": "2.0.0",
+            "define": "IMPLICITUI_TMP"
+        },
+        {
+            "name": "com.unity.textmeshpro",
+            "expression": "3.0.0",
+            "define": "IMPLICITUI_TMP"
+        }
+    ],
     "noEngineReferences": false
 }

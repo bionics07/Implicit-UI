@@ -8,6 +8,14 @@
 .utmp/
 /[Ll]ibrary/
 /[Tt]emp/
+
+# The CI host project is generated per Unity line on the runner; only its manifest is versioned.
+/.ci/compat-host/[Ll]ibrary/
+/.ci/compat-host/[Tt]emp/
+/.ci/compat-host/[Ll]ogs/
+/.ci/compat-host/[Uu]ser[Ss]ettings/
+/.ci/compat-host/ProjectSettings/
+/.ci/compat-host/Assets/Samples/
 /[Oo]bj/
 /[Bb]uild/
 /[Bb]uilds/
