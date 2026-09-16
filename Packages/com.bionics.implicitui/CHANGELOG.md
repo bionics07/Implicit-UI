@@ -13,3 +13,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stretching its borders. It uses the Image's own Fill Amount, Fill Method and Fill Origin, so code that animates
   `image.fillAmount` keeps working, and changing the fill never rebuilds layout. Every fill method: Horizontal,
   Vertical, and Radial 90, 180 and 360 with Clockwise, matching what a native Filled image draws.
+- Implicit Grayscale: turns an Image or RawImage gray, on its own when its button is disabled, with an optional
+  tint over the gray. No material to set up, and images with different gray amounts still batch together.
+  Its inspector shows which button or parent image makes it gray, and which images below it follow it.
