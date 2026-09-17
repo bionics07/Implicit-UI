@@ -310,13 +310,19 @@ A TMP não renderiza com shader de UI comum — usa SDF (`TextMeshPro/Distance F
 
 **Problema:** ícone de 24×24 é impossível de acertar no dedo. Gambiarras: Image transparente maior atrás, ou inflar o RectTransform e compensar com um filho.
 
-**Solução:** componente implementando `ICanvasRaycastFilter` que expande a área aceita por padding (top/bottom/left/right, ou valor único). Raycast aceita, visual não muda, hierarquia não muda.
+**Medido no fonte do uGUI 2021.3.45f2 e 6000.6 (16/09/2026) — muda o plano original:**
+- `Graphic.raycastPadding` já existe nas duas (negativo aumenta a área), com campo no inspector e retângulo na Scene view. **Padding não é feature nossa.**
+- O `GraphicRaycaster` testa retângulo + padding **antes** dos `ICanvasRaycastFilter`; um filtro só recusa, nunca aumenta. Aumentar a área exige escrever `raycastPadding`.
+- Alpha hit test sem Read/Write **não lança exceção** (o guia dizia): loga erro **a cada raycast** e aceita o toque. Na faixa de padding amostra fora do sprite; na 6.6 mapeia por `sprite.rect`, errado para sprite em atlas.
+- A 6.x tem `RaycastReceiver` (Graphic invisível, sem malha, para bloquear/detectar toque sem visual). **Não é o Hitbox** e não será portado (resolve outro problema, duplicaria ao atualizar a Unity).
 
-**Na v1.0, os dois modos:**
-- Padding em unidades de UI.
-- **Modo dedo mínimo (dp)**: garantir um alvo mínimo, **padrão 48dp** *(decidido em 14/09/2026)*, calculado a partir do `Canvas.scaleFactor` e do DPI da tela. Cuidado: `Screen.dpi` retorna 0 em algumas plataformas — precisa de fallback definido e testado *(valor do fallback: aberto, Fase 5)*.
-
-**Bônus no mesmo componente — envelopar `alphaHitTestMinimumThreshold`:** hoje **lança exceção em runtime** se a textura do sprite não estiver com Read/Write enabled, com mensagem que não explica a causa. O componente expõe a opção de forma amigável, valida no editor antes do erro, e oferece o fix de import settings com um clique.
+**`ImplicitHitbox` (Fase 5, decidido em 16/09/2026):**
+- **Tamanho mínimo em dp**, valor único, padrão 48. Eixo menor que o mínimo cresce igual dos dois lados; vale o maior entre o padding do usuário e o mínimo. dp → px por `Screen.dpi / 160` (base do Android; iOS @1x é 163 ppi, praticamente igual); **fallback 160** quando `Screen.dpi` é 0. px → unidades pelo `scaleFactor` do Canvas raiz e a escala do objeto. **World Space: não se aplica.**
+- **Dono do `raycastPadding` — opção C:** o campo nativo é a base e o usuário o edita normalmente. O componente só escreve **em runtime** (nada no Edit Mode, para não gravar na cena/prefab um valor que depende do monitor), recalcula uma vez por frame, adota como nova base qualquer mudança externa (compara com o último valor escrito) e restaura a base ao desativar.
+- **Alpha hit test próprio** (limiar no componente; o do Image deve ficar em 0 — o inspector avisa e zera): dentro do rect vale o alpha; **faixa de padding sempre aceita**; mapeia Simple/Filled, Sliced, Tiled e preserveAspect; usa `textureRect`/`textureRectOffset` (sprite em atlas retangular); **Tight Packing ou rotação no atlas → avisa e cai para o retângulo**; textura sem Read/Write → **aviso uma vez só** e aceita.
+- **Inspector:** informa o dpi usado no Editor (o do monitor) e indica o **Device Simulator**; aviso com **custo concreto** do Read/Write (KB estimados da textura na plataforma atual) e botão para ativar; para atlas, avisa que é o atlas inteiro (até max size²) e ativa no atlas (v2 pelo `SpriteAtlasImporter` na 2022.1+, v1 pelo `SpriteAtlasExtensions`).
+- **Scene view:** contorno verde da área final (padding + mínimo, com o dpi do monitor no Edit Mode; o valor escrito em Play Mode).
+- Funciona em qualquer Graphic; o alpha só em Image.
 
 ### 6.2 Tamanho de fonte sincronizado entre irmãos
 
@@ -493,7 +499,7 @@ Cena demo com comparação lado a lado: barra de vida com Sliced+Filled vs. a ga
 3. **Canal de vértice livre.** O `RectMask2D` moderno usa `TEXCOORD2` para dados de máscara. Confirmar qual canal está realmente livre para a intensidade do grayscale, em cada versão da matriz.
    *(15/09/2026: esse `TEXCOORD2` é interpolador do shader, não canal da mesh — ver §4.4 e §5.3. A pergunta passa a ser qual canal da mesh a TMP e o `UI-Default` leem em cada versão.)*
    *(Fase 4, 15/09/2026: decidido **UV0.zw** — o Canvas sempre envia UV0, e o `UI-Default` só lê o `.xy`. Verificado na 6.6 com Canvas Screen Space Camera renderizando num RenderTexture: z=0 mantém a cor, z=1 dá cinza de luminância 0,299 nos três canais, w aplica o tint. No shader, os valores vão pelo interpolador `TEXCOORD3`, porque o `TEXCOORD2` é a máscara. As demais linhas da matriz ficam provadas pelo CI.)*
-4. **`Screen.dpi` retorna 0** em algumas plataformas. Definir e testar o fallback do modo dp do `ImplicitHitbox`.
+4. **`Screen.dpi` retorna 0** em algumas plataformas. Definir e testar o fallback do modo dp do `ImplicitHitbox`. *(16/09/2026: fallback 160 dpi, decidido na Fase 5 — §6.1. O valor 0 não é reproduzível no Editor; o ramo é uma linha e fica coberto só por leitura de código.)*
 
 ### 11.4 Render pipelines
 

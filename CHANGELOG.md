@@ -16,3 +16,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implicit Grayscale: turns an Image or RawImage gray, on its own when its button is disabled, with an optional
   tint over the gray. No material to set up, and images with different gray amounts still batch together.
   Its inspector shows which button or parent image makes it gray, and which images below it follow it.
+- Implicit Hitbox: keeps small graphics easy to tap with a minimum touch size in dp (48 by default), applied
+  while the game runs on top of the native Raycast Padding, and an alpha hit test that works with padding and
+  sprite atlases, warns once when the texture cannot be read, and enables Read/Write with one click.
