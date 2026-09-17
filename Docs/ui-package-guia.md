@@ -323,6 +323,7 @@ A TMP não renderiza com shader de UI comum — usa SDF (`TextMeshPro/Distance F
 - **Inspector:** informa o dpi usado no Editor (o do monitor) e indica o **Device Simulator**; aviso com **custo concreto** do Read/Write (KB estimados da textura na plataforma atual) e botão para ativar; para atlas, avisa que é o atlas inteiro (até max size²) e ativa no atlas (v2 pelo `SpriteAtlasImporter` na 2022.1+, v1 pelo `SpriteAtlasExtensions`).
 - **Scene view:** contorno verde da área final (padding + mínimo, com o dpi do monitor no Edit Mode; o valor escrito em Play Mode).
 - Funciona em qualquer Graphic; o alpha só em Image.
+- **Verificado em aparelho Android (17/09/2026, IL2CPP ARM64):** 2340×1080, `Screen.dpi` 450, escala do Canvas 1,10 → 48dp = 135 px = 122 unidades, e as áreas medidas batem (20×20 → 122×122; barra 240×16 → 240×122; padding −100 → 220×220; Minimum Size off e sem hitbox continuam 20×20). Alpha hit test, faixa de padding e textura sem Read/Write se comportaram como no Editor.
 
 ### 6.2 Tamanho de fonte sincronizado entre irmãos
 
