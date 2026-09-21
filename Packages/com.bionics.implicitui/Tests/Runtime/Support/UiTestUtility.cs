@@ -21,6 +21,16 @@ namespace ImplicitUI.Tests
             return gameObject.AddComponent<Image>();
         }
 
+        // Unity's built-in font. It was renamed in 2022.2, and asking for the other name logs an error.
+        public static Font BuiltinFont()
+        {
+#if UNITY_2022_2_OR_NEWER
+            return Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+#else
+            return Resources.GetBuiltinResource<Font>("Arial.ttf");
+#endif
+        }
+
         // A sprite over part of a texture, so its UVs are not 0..1 - what an atlas does to a sprite.
         public static Sprite CreateSprite(int textureSize, Rect rect, Vector4 border)
         {

@@ -340,6 +340,17 @@ A TMP não renderiza com shader de UI comum — usa SDF (`TextMeshPro/Distance F
 
 **Cuidado:** não pode entrar em loop de rebuild (mudar fontSize dispara layout, que dispara recálculo). Precisa de dirty flag e de aplicar fora do ciclo de rebuild.
 
+**Implementado na Fase 6 (17 e 21/09/2026) — medições e decisões:**
+- **Medido na 6.6:** TMP informa o tamanho resolvido em `fontSize` depois de `ForceMeshUpdate()`; legacy, em `TextGenerator.fontSizeUsedForBestFit` (em pixels do Canvas — dividir pelo `scaleFactor`). **Baixar o máximo do auto size** para o menor tamanho faz o texto resolver exatamente nele, com auto size ainda ligado. O setter de `fontSizeMax` da TMP já marca vértices e layout como sujos.
+- **Mecanismo:** o grupo só escreve o máximo (`fontSizeMax` / `resizeTextMaxSize`), guarda o original e o devolve ao ser desativado; mudança externa do máximo vira o novo original (mesmo padrão do Hitbox). Recalcula quando uma assinatura barata (textos, conteúdo, rect, estado, mínimo, máximo alterado por terceiros) muda — as próprias escritas não entram, então não há loop.
+- **Edit Mode — opção C:** prévia em memória; `TextSizeGroupPreviewGuard` devolve os originais antes de salvar cena/prefab, antes de entrar em Play e antes de recarregar scripts, e reaplica depois. Verificado: cena salva com a prévia ativa ficou com os máximos originais, e abrir a cena não a marca como alterada. Risco documentado no inspector: aplicar o `Font Size Max` como override de prefab durante a prévia gravaria o valor.
+- **Quem entra:** todos os descendentes; um grupo aninhado ativo cuida da própria subárvore. Ficam de fora: inativos, vazios, excluídos no inspector e, por padrão, sem auto size. **Include Fixed Size Texts:** o tamanho fixo participa do cálculo, sem ser alterado.
+- **TMP e legacy juntos:** permitido; com qualquer legacy o grupo arredonda para baixo.
+- **Mínimo próprio acima do grupo:** respeitado, marcado "min" na lista e com aviso.
+- **Inspector do grupo (pedido do autor):** tamanho do grupo e lista de todos os textos com checkbox de incluir/excluir, tamanho sozinho e tamanho recebido. A exclusão fica no grupo (nada é adicionado aos filhos).
+- **CI (21/09/2026):** o host de CI não tinha os TMP Essential Resources, e `TMP_FontAsset.CreateFontAsset` não aceita a fonte embutida. Resolvido com `.ci/compat-host/Assets/Editor/ImportTextMeshProEssentials.cs` (só no host, nunca no package): no load, importa o `TMP Essential Resources.unitypackage` do `com.unity.textmeshpro` (antes do Unity 6) ou do `com.unity.ugui` (Unity 6+); na linha sem TMP não faz nada. O import termina antes do test run. Verificado localmente em cópias do host com 2021.3.45f2, 2022.3.62f3 e 6000.6.0f1: EditMode 129/129 e PlayMode 7/7 nas três, testes de TMP rodando (não ignorados), 0 `warning CS`. Os testes TMP continuam se ignorando sozinhos se não houver fonte padrão.
+- **Armadilha de versão achada nessa verificação:** a fonte embutida `LegacyRuntime.ttf` só existe da 2022.2 em diante; antes é `Arial.ttf`, e pedir a errada loga um erro que falha o teste. Os testes usam `UiTestUtility.BuiltinFont()`.
+
 ### 6.3 Font Changer (ferramenta de editor)
 
 **Problema:** trocar a fonte de um projeto inteiro é manual e propenso a esquecer objetos. Acontece em rebranding, troca de licença de fonte, suporte a novo idioma.

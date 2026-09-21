@@ -19,3 +19,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implicit Hitbox: keeps small graphics easy to tap with a minimum touch size in dp (48 by default), applied
   while the game runs on top of the native Raycast Padding, and an alpha hit test that works with padding and
   sprite atlases, warns once when the texture cannot be read, and enables Read/Write with one click.
+- Implicit Text Size Group: gives every auto-sized Text and TextMeshPro text below it the smallest size any of
+  them picks alone, by lowering their auto size maximum. Previews in Edit Mode without changing saved files, and
+  lists every text in its inspector with a checkbox to leave it out.
