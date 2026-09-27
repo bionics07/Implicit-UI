@@ -22,3 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implicit Text Size Group: gives every auto-sized Text and TextMeshPro text below it the smallest size any of
   them picks alone, by lowering their auto size maximum. Previews in Edit Mode without changing saved files, and
   lists every text in its inspector with a checkbox to leave it out.
+- Font Changer (Tools > Implicit UI > Font Changer): changes the font of every TextMeshPro or legacy Text in the
+  open scenes or in a folder of prefabs, after a dry run that lists each text with a checkbox. Values a prefab
+  instance inherits are left to the prefab, TextMeshPro materials are checked against the target font, and
+  material presets are kept unless chosen.

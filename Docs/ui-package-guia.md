@@ -401,6 +401,18 @@ A TMP não renderiza com shader de UI comum — usa SDF (`TextMeshPro/Distance F
 
 8. **Performance:** `AssetDatabase.FindAssets("t:Prefab", folders)` e envolver a aplicação em `AssetDatabase.StartAssetEditing` / `StopAssetEditing`.
 
+**Implementado na Fase 7 (21/09/2026) — decisões do autor e medições:**
+- **Undo:** objetos de cena usam o Undo da Unity (`ApplyModifiedProperties`, um grupo "Change Fonts"). **Prefab em disco não tem Undo** — decisão do autor: o controle de versão cobre; a janela avisa sempre e a confirmação de Apply lista quantos prefabs serão salvos.
+- **Janela** `Tools > Implicit UI > Font Changer`: setup → **Scan** (dry-run, nada muda) → lista agrupada pelo material atual (TMP) ou fonte (legacy), checkbox por item e por grupo → **Apply** com confirmação → log clicável (ping). Qualquer mudança no setup descarta o scan.
+- **TMP × Text legacy:** seletor no topo; uma execução muda um tipo. Leitura/escrita por `SerializedObject` (`m_fontAsset`/`m_sharedMaterial`, `m_FontData.m_Font`), sem efeitos dos setters.
+- **Herdado de prefab:** detectado por `SerializedProperty.prefabOverride` (medido: atribuir a mesma fonte não cria override); **sempre pulado**, sem opção de forçar, e listado com o prefab de origem. Override existente é alterado. Vale para instâncias em cena, variantes (herdado da base) e prefabs aninhados.
+- **Reencontrar o texto no Apply:** caminho por índices de filhos + índice do componente (nomes como "Label" se repetem; prefabs são descarregados entre scan e apply). Se o texto mudou de fonte/material desde o scan, é **pulado** e aparece no log.
+- **Material (TMP):** opcional; vazio = material padrão da fonte de destino. Validado pelo atlas (`_MainTex` ∈ `atlasTextures`) — material de outra fonte **bloqueia**. Filtro "From Material" para rodar uma vez por preset. Texto com material próprio (preset) entra **desmarcado**, salvo se filtrado por material.
+- **Modo pasta:** só dentro de `Assets` (packages são read-only), `t:Prefab` sem modelos, opção de subpastas; prefab aberto no Prefab Mode é pulado no modo pasta. No modo cena, se o Prefab Mode estiver aberto, só ele é varrido (o usuário salva).
+- **Avisos no dry-run:** altura de linha relativa com diferença > 10% (TMP), fallbacks que a fonte de destino não tem, aviso genérico de métricas no legacy, contagem de herdados. Listas de fallback não são alteradas.
+- **Não usa `StartAssetEditing`:** cada prefab é carregado, alterado e salvo em sequência; adiar imports poderia fazer um prefab aninhado ser lido desatualizado. Custo de performance aceito.
+- **Testes:** 16 EditMode (scene mode roda na cena temporária do Test Runner; prefabs numa pasta temporária apagada no fim); 8 mutações (herdado, mudança desde o scan, checkbox, material, subpastas, inativos, preset, Undo) pegas.
+
 ---
 
 ## 7. Backlog — estudo antes de virar promessa
