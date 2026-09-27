@@ -103,6 +103,8 @@ namespace ImplicitUI.Editor
                 item.ChildPath = ChildPath(root.transform, component.transform);
                 item.ComponentIndex = Array.IndexOf(component.GetComponents(type), component);
                 item.DisplayPath = HierarchyPath(component.transform);
+                item.Content = FontKinds.Content(component);
+                item.Active = component.gameObject.activeInHierarchy;
                 scan.Items.Add(item);
             }
         }

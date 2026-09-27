@@ -9,6 +9,8 @@ namespace ImplicitUI.Editor
     // Apply always matches what is on screen.
     internal sealed class FontChangerWindow : EditorWindow
     {
+        private const int MaxPreviewLength = 60;
+
         private readonly FontChangeSettings m_Settings = new FontChangeSettings();
         private FontChangeScan m_Scan;
         private List<FontChangeLogEntry> m_Log;
@@ -179,8 +181,10 @@ namespace ImplicitUI.Editor
             using (new EditorGUI.DisabledScope(!item.CanChange))
                 item.Selected = EditorGUILayout.Toggle(item.Selected && item.CanChange, GUILayout.Width(34f));
 
+            // What the text says tells two "Label" objects apart; the path and the file are in the tooltip.
             var where = item.Location == FontChangeLocation.PrefabAsset ? item.AssetPath + " > " : "";
-            if (GUILayout.Button(new GUIContent(where + item.DisplayPath, "Click to highlight it"), EditorStyles.label))
+            var label = new GUIContent(Preview(item), where + item.DisplayPath + "\nClick to highlight it");
+            if (GUILayout.Button(label, EditorStyles.label))
                 Ping(item);
 
             GUILayout.FlexibleSpace();
@@ -188,8 +192,22 @@ namespace ImplicitUI.Editor
             EditorGUILayout.EndHorizontal();
         }
 
+        // The text on one line, cut to fit a row, with the object name when the text is empty.
+        private static string Preview(FontChangeItem item)
+        {
+            var content = item.Content;
+            if (string.IsNullOrEmpty(content))
+                return "(empty) " + item.DisplayPath;
+
+            content = content.Replace('\r', ' ').Replace('\n', ' ').Trim();
+            return content.Length > MaxPreviewLength ? content.Substring(0, MaxPreviewLength) + "…" : content;
+        }
+
         private static string Note(FontChangeItem item)
         {
+            if (!item.Active)
+                return item.Reason == FontChangeReason.Inherited ? "inactive, inherited - skipped" : "inactive";
+
             switch (item.Reason)
             {
                 case FontChangeReason.Inherited:

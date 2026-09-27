@@ -72,6 +72,18 @@ namespace ImplicitUI.Editor
             return null;
         }
 
+        // What a text says, whatever its kind.
+        internal static string Content(Component component)
+        {
+            if (component is Text text)
+                return text.text;
+#if IMPLICITUI_TMP
+            if (component is TMP_Text tmp)
+                return tmp.text;
+#endif
+            return null;
+        }
+
         // A TextMeshPro material samples its font's atlas; one made for another font renders garbage.
         internal static bool MaterialBelongsTo(Material material, UnityEngine.Object font)
         {

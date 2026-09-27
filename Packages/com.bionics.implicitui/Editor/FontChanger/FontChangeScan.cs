@@ -90,6 +90,10 @@ namespace ImplicitUI.Editor
         internal int[] ChildPath;
         internal int ComponentIndex;
         internal string DisplayPath;
+
+        // What the text says, and whether it is active: "Label" is rarely enough to tell two texts apart.
+        internal string Content;
+        internal bool Active;
         internal Object CurrentFont;
         internal Material CurrentMaterial;
         internal FontChangeReason Reason;

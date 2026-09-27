@@ -59,6 +59,11 @@ namespace ImplicitUI.Tests.EditorTests
             Assert.That(scan.Items.Count, Is.EqualTo(2));
             Assert.That(active.font, Is.SameAs(m_FontA), "the scan is a dry run");
             Assert.That(hidden.font, Is.SameAs(m_FontA));
+
+            // The window lists what each text says, and marks the ones that are not on screen.
+            var hiddenItem = scan.Items.Single(item => item.Content == "Hidden");
+            Assert.That(hiddenItem.Active, Is.False);
+            Assert.That(scan.Items.Single(item => item.Content == "Active").Active, Is.True);
         }
 
         [Test]
