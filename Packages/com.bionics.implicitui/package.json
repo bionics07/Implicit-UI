@@ -1,8 +1,8 @@
 {
   "name": "com.bionics.implicitui",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "displayName": "Implicit UI",
-  "description": "Small, practical UI improvements for Unity.",
+  "description": "Small, practical UI improvements for uGUI, where adding the component is the whole setup: fill a Sliced image, gray out a disabled button, grow a touch target to a finger-friendly size, share one font size between labels, and swap fonts across scenes and prefabs.",
   "unity": "2021.3",
   "author": {
     "name": "Bionics",
@@ -13,9 +13,48 @@
   "licensesUrl": "https://github.com/bionics07/Implicit-UI/blob/main/LICENSE",
   "keywords": [
     "ui",
-    "user interface"
+    "ugui",
+    "user interface",
+    "image fill",
+    "sliced",
+    "grayscale",
+    "disabled",
+    "hitbox",
+    "touch",
+    "raycast",
+    "text",
+    "font",
+    "auto size",
+    "editor tool"
   ],
   "dependencies": {
     "com.unity.ugui": "1.0.0"
-  }
+  },
+  "samples": [
+    {
+      "displayName": "Implicit Fill",
+      "description": "A framed health bar filling while it is resized, next to the same sprite as a plain Filled image.",
+      "path": "Samples~/Implicit Fill"
+    },
+    {
+      "displayName": "Implicit Grayscale",
+      "description": "Buttons turning gray on their own while they are not interactable, and a panel graying the images below it.",
+      "path": "Samples~/Implicit Grayscale"
+    },
+    {
+      "displayName": "Implicit Hitbox",
+      "description": "Two 24x24 icons, one with a minimum touch size, counting the clicks that land just outside them.",
+      "path": "Samples~/Implicit Hitbox"
+    },
+    {
+      "displayName": "Implicit Text Size Group",
+      "description": "Two menus with the same labels: one sharing a single font size, one letting each label size itself.",
+      "path": "Samples~/Implicit Text Size Group"
+    },
+    {
+      "displayName": "Font Changer",
+      "description": "A scene to try the Font Changer window on, with its texts reporting which font they use.",
+      "path": "Samples~/Font Changer"
+    }
+  ]
 }

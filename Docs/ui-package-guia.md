@@ -87,6 +87,7 @@ Testes EditMode + PlayMode, CI GameCI em Docker na matriz de §11, compatível c
 | Debug de canvas rebuild / batch (§7.1) | Backlog |
 | Analyzer de âncoras / resolução (§7.2) | Backlog |
 | Layout Group mais leve (§7.3) | Backlog |
+| Textos que estouram o retângulo (§7.4) | 1.1 |
 
 ### 2.3 Descartado — e por quê
 
@@ -446,6 +447,18 @@ Custo dominante: cada rebuild faz `GetComponents<ILayoutElement>` em **todo** fi
 Direção: cache dos `ILayoutElement` invalidado em `OnTransformChildrenChanged`; dirty flag granular por eixo.
 
 Encaixe no princípio implícito: **drop-in replacement** — troca o componente e ganha performance sem mudar mais nada. **Exigência: benchmark antes de anunciar.**
+
+### 7.4 Textos que estouram o retângulo
+
+**Origem (27/09/2026):** veio do plano de uma tool separada de localização com LLM (fase 2 daquele plano). A tool em si **não entra neste package** — exigiria o `com.unity.localization`, chave de API e chamadas de rede, contra o princípio implícito e a regra de zero dependências (§0, §1). Só esta parte é uGUI puro.
+
+**Problema:** trocar a fonte, traduzir para alemão ou rodar noutra resolução faz texto vazar do retângulo, e só se descobre olhando tela por tela.
+
+**Direção:** janela que varre cenas abertas e prefabs (a varredura do Font Changer já faz isso, incluindo inativos e sem criar override) e lista os textos que não cabem: estoura na altura, na largura, ou o auto size bateu no próprio mínimo. Lista clicável, como o log do Font Changer.
+
+**Encaixe:** é a rede de segurança do Font Changer (§6.3) e vizinha do `ImplicitTextSizeGroup` (§6.2), que já mede o tamanho resolvido de cada texto. A tool de localização, sendo package separado, pode chamar essa verificação em vez de reimplementá-la.
+
+**Versão alvo: 1.1** — não entra na v1.0 para não atrasar a publicação.
 
 ---
 
