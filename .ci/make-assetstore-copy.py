@@ -213,7 +213,9 @@ def verify(dest, editor):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dest", default=os.path.join("Builds", "assetstore"))
+    # Fora do repositorio: a copia e um projeto Unity inteiro (com Library), e um projeto dentro de outro so confunde.
+    # Os builds de player continuam em Builds/ dentro do repo.
+    parser.add_argument("--dest", default=os.path.join("..", "AssetStoreUpload"))
     parser.add_argument("--editor", default="6000.6.0f1",
                         help="A Asset Store Publishing Tools exige 2022.3 ou mais novo.")
     parser.add_argument("--verify", action="store_true",
