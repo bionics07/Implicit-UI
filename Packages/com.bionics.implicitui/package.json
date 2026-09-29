@@ -1,6 +1,6 @@
 {
   "name": "com.bionics.implicitui",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "displayName": "Implicit UI",
   "description": "Small, practical UI improvements for uGUI, where adding the component is the whole setup: fill a Sliced image, gray out a disabled button, grow a touch target to a finger-friendly size, share one font size between labels, and swap fonts across scenes and prefabs.",
   "unity": "2021.3",

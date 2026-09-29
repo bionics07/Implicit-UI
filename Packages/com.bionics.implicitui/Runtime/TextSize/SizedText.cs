@@ -81,14 +81,19 @@ namespace ImplicitUI
 
             var settings = m_Text.GetGenerationSettings(RectTransform.rect.size);
             settings.resizeTextMaxSize = Mathf.FloorToInt(max);
+
+            // Measured at scale 1 on purpose. Best fit answers in whole pixels, so measuring through the canvas scale
+            // and converting back would round twice and make the answer depend on the Game view size or the device
+            // resolution: the same menu could settle on 23, 24 or 26 on different runs.
+            settings.scaleFactor = 1f;
+
             if (s_Generator == null)
                 s_Generator = new TextGenerator();
 
             s_Generator.Populate(m_Text.text, settings);
 
-            // The generator works in canvas pixels; the text's fields are in its own units.
-            var scale = settings.scaleFactor > 0f ? settings.scaleFactor : 1f;
-            return s_Generator.fontSizeUsedForBestFit / scale;
+            // Whole pixels at scale 1 are the text's own units.
+            return s_Generator.fontSizeUsedForBestFit;
         }
     }
 

@@ -232,6 +232,26 @@ namespace ImplicitUI.Tests.EditorTests
             Assert.That(Resolved(ok), Is.EqualTo(backAlone));
         }
 
+        // Best fit answers in whole pixels, so a size read through the canvas scale is rounded twice: the same menu
+        // settled on 22 at one Game view size and on 20 at another, and kept the wrong one for the rest of the session.
+        [Test]
+        public void TheSizeStaysTheSameWhenTheCanvasScaleChanges()
+        {
+            var root = Node(m_Canvas.transform, "Menu");
+            var ok = Legacy(root, Short);
+            Legacy(root, Long);
+            var group = Group(root);
+            var unscaled = group.GroupSize;
+            var applied = ok.resizeTextMaxSize;
+
+            // A scale that lands between whole pixels, like a phone running a menu authored for a tablet.
+            m_Canvas.scaleFactor = 0.486f;
+            group.Refresh();
+
+            Assert.That(group.GroupSize, Is.EqualTo(unscaled));
+            Assert.That(ok.resizeTextMaxSize, Is.EqualTo(applied));
+        }
+
 #if IMPLICITUI_TMP
         [Test]
         public void TextMeshProTextsShareTheSmallestSize()

@@ -5,8 +5,9 @@ using UnityEditor.SceneManagement;
 
 namespace ImplicitUI.Editor
 {
-    // Text size groups preview their sizes in Edit Mode by lowering each text's maximum in memory. Those values depend on
-    // the Game view size, so they must never reach a saved file or survive into Play Mode: this puts the original
+    // Text size groups preview their sizes in Edit Mode by lowering each text's maximum in memory. Those values follow
+    // whatever the texts around them say today, so they must never reach a saved file or survive into Play Mode, where
+    // the content may well be different: this puts the original
     // maximums back right before a scene or prefab is saved, before Play Mode serializes the scene, and before scripts
     // reload (the group's memory of the originals does not survive a reload), then lets the groups apply again.
     [InitializeOnLoad]

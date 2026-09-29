@@ -5,6 +5,16 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-09-29
+
+### Fixed
+
+- Implicit Text Size Group: the size no longer depends on the canvas scale. Best fit answers in whole pixels, so
+  reading it back through the scale rounded twice and the same menu could settle on 23, 24 or 26 between runs, or
+  on a device with a different resolution, and keep that size for the rest of the session. Sizes are now measured
+  at scale 1, in the text's own units. Texts in a group always matched each other and still do; they are now up to
+  one pixel closer to the size the smallest text picks alone.
+
 ## [1.0.0] - 2026-09-27
 
 ### Added

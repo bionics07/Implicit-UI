@@ -22,8 +22,13 @@ namespace ImplicitUI
     /// with any legacy Text rounds down.
     /// </para>
     /// <para>
+    /// Sizes are measured in the text's own units, so a group settles on the same size whatever the canvas scale, the
+    /// Game view size or the device resolution.
+    /// </para>
+    /// <para>
     /// In the Editor the group previews the sizes, and puts the original maximums back whenever a scene or prefab is
-    /// saved, Play Mode starts or scripts reload: saved files never hold a value that depends on the Game view size.
+    /// saved, Play Mode starts or scripts reload: a saved file keeps the maximums you authored, never the ones the
+    /// group worked out from the texts around them.
     /// </para>
     /// </remarks>
     [AddComponentMenu("UI/Implicit UI/Implicit Text Size Group")]
